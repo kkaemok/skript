@@ -1,0 +1,25 @@
+# ----------------------------------------------
+# Command: /book
+# ----------------------------------------------
+# Opens a custom written book GUI for the player.
+# - Works even if the player isn't holding a book.
+# - Preserves the item in the player's hand before and after opening.
+# - Supports multiple pages; edit the 'pages of {_book}' section to add content.
+# - Ideal for server rules, guides, or announcements.
+# ----------------------------------------------
+command /book:
+    trigger:
+        # Save the current item in the player's hand
+        set {_oldTool} to player's tool
+
+        # Create a temporary book
+        set {_book} to written book named "Title of the Book"
+        set pages of {_book} to "Edit this text.", "Add more pages here."
+
+        # Temporarily replace the item in hand to open the book
+        set player's tool to {_book}
+        open book {_book} to player
+
+        # Restore the original item after opening
+        wait 1 tick
+        set player's tool to {_oldTool}
