@@ -1,0 +1,6 @@
+on tab complete of "/tpa":
+    if tab arg-1 is not set:
+        set tab completions for position 1 to "플레이어", "수락", "거부"
+    else if tab arg-1 is "플레이어":
+        if tab arg-2 is not set:
+            set tab completions for position 2 to all players
