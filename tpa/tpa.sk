@@ -1,1 +1,47 @@
-test 123
+#############################
+#       /tpa 시스템 (최종)
+#############################
+
+command /tpa [<text>] [<text>]:
+    executable by: players
+    trigger:
+        # 요청 보내기: /tpa 플레이어 <플레이어이름>
+        if arg-1 is "플레이어":
+            if arg-2 is set:
+                set {_target} to arg-2 parsed as player
+                if {_target} is online:
+                    set {tpa::%{_target}%} to player
+                    send "&e%player% 님이 순간이동 요청을 보냈습니다. &a/tpa 수락 &e또는 &c/tpa 거부" to {_target}
+                    send "&a%{_target}% 님에게 요청을 보냈습니다." to player
+                    wait 30 seconds
+                    if {tpa::%{_target}%} is player:
+                        send "&c요청 시간이 만료되었습니다." to player
+                        send "&c텔레포트 요청이 만료되었습니다." to {_target}
+                        delete {tpa::%{_target}%}
+                else:
+                    send "&c플레이어를 찾을 수 없습니다." to player
+            else:
+                send "&c사용법: /tpa 플레이어 <플레이어이름>" to player
+
+        # 수락: /tpa 수락
+        else if arg-1 is "수락":
+            if {tpa::%player%} is set:
+                set {_requester} to {tpa::%player%}
+                teleport {_requester} to player
+                send "&a%player% 님이 순간이동 요청을 수락했습니다!" to {_requester}
+                send "&a%{_requester}% 님이 당신에게 순간이동했습니다!" to player
+                delete {tpa::%player%}
+            else:
+                send "&c받은 요청이 없습니다." to player
+
+        # 거부: /tpa 거부
+        else if arg-1 is "거부":
+            if {tpa::%player%} is set:
+                send "&c텔레포트 요청을 거부했습니다." to player
+                send "&c%player% 님이 요청을 거부했습니다." to {tpa::%player%}
+                delete {tpa::%player%}
+            else:
+                send "&c받은 요청이 없습니다." to player
+
+        else:
+            send "&c사용법: /tpa 플레이어 <플레이어이름> | /tpa 수락 | /tpa 거부" to player
