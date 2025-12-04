@@ -1,0 +1,96 @@
+command /rtp:
+    trigger:
+        openRTPMenu(player)
+
+function openRTPMenu(p: player):
+    set {_gui} to chest inventory with 3 rows named "ʀᴀɴᴅᴏᴍ ᴛᴇʟᴇᴘᴏʀᴛ"
+    updateRTPGUI({_p}, {_gui})
+    open {_gui} to {_p}
+    loopRTPGUI({_p}, {_gui})
+
+function updateRTPGUI(p: player, gui: inventory):
+    set {_overworldCount} to number of all players where [input's world is "world"]
+    set {_netherCount} to number of all players where [input's world is "world_nether"]
+    set {_endCount} to number of all players where [input's world is "world_the_end"]
+    set {_ping} to the value of the placeholder "player_ping" for {_p}
+
+    # 오버월드 아이템
+    set {_overworldItem} to grass block named "&aᴏᴠᴇʀᴡᴏʀʟᴅ"
+    set {_overworldLore::*} to "&f눌러서 텔레포트..." and "&r" and "&7현재 오버월드 인원: &e%{_overworldCount}%명" and "&7핑: &a%{_ping}%ms"
+    set lore of {_overworldItem} to {_overworldLore::*}
+    set slot 11 of {_gui} to {_overworldItem}
+
+    # 네더 아이템 (advancement check removed)
+    set {_netherItem} to netherrack named "&cɴᴇᴛʜᴇʀ"
+    set {_netherLore::*} to "&f눌러서 텔레포트..." and "&r" and "&7현재 네더 인원: &e%{_netherCount}%명" and "&7핑: &a%{_ping}%ms"
+    set lore of {_netherItem} to {_netherLore::*}
+    set slot 13 of {_gui} to {_netherItem}
+
+    # 엔드 아이템 (advancement check removed)
+    set {_endItem} to end stone named "&5ᴇɴᴅ"
+    set {_endLore::*} to "&f눌러서 텔레포트..." and "&r" and "&7현재 엔드 인원: &e%{_endCount}%명" and "&7핑: &a%{_ping}%ms"
+    set lore of {_endItem} to {_endLore::*}
+    set slot 15 of {_gui} to {_endItem}
+
+function loopRTPGUI(p: player, gui: inventory):
+    set {rtp::%{_p}%::gui-open} to true
+    loop 999 times:
+        wait 1 second
+        if {rtp::%{_p}%::gui-open} is not set:
+            stop
+        if current inventory of {_p} is not {_gui}:
+            delete {rtp::%{_p}%::gui-open}
+            stop
+        updateRTPGUI({_p}, {_gui})
+
+function rtpDelay(p: player, w: text):
+    set {_start} to location of {_p}
+    set {_startX} to x-coordinate of {_start}
+    set {_startZ} to z-coordinate of {_start}
+
+    loop 5 times:
+        set {_timeLeft} to 5 - loop-number + 1
+        send action bar "&e%{_timeLeft}%초 남았습니다. 움직이지 마세요!" to {_p}
+        play sound "entity.arrow.hit_player" at {_p}
+        wait 1 second
+
+        set {_now} to location of {_p}
+        set {_nowX} to x-coordinate of {_now}
+        set {_nowZ} to z-coordinate of {_now}
+
+        if abs({_nowX} - {_startX}) > 0.1:
+            send action bar "&c움직여서 취소되었습니다!" to {_p}
+            play sound "entity.villager.no" at {_p}
+            stop
+        if abs({_nowZ} - {_startZ}) > 0.1:
+            send action bar "&c움직여서 취소되었습니다!" to {_p}
+            play sound "entity.player.levelup" at {_p}
+            stop
+
+    send action bar "&a0초! 순간이동 합니다..." to {_p}
+    play sound "entity.player.levelup" at {_p}
+    execute console command "betterrtp:rtp player %{_p}% %{_w}%"
+
+on inventory click:
+    if name of event-inventory is "ʀᴀɴᴅᴏᴍ ᴛᴇʟᴇᴘᴏʀᴛ":
+        if clicked inventory is not player inventory:
+            cancel event
+
+            # Overworld
+            if clicked slot is 11:
+                close player's inventory
+                rtpDelay(player, "world")
+
+            # Nether (no advancement required)
+            else if clicked slot is 13:
+                close player's inventory
+                rtpDelay(player, "world_nether")
+
+            # End (no advancement required)
+            else if clicked slot is 15:
+                close player's inventory
+                rtpDelay(player, "world_the_end")
+
+on inventory close:
+    if name of event-inventory is "ʀᴀɴᴅᴏᴍ ᴛᴇʟᴇᴘᴏʀᴛ":
+        delete {rtp::%player%::gui-open}
