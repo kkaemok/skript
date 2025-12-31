@@ -1,0 +1,49 @@
+on join:
+    while player is online:
+        # 1. World Name Setup
+        if world of player is "world":
+            set {_world} to "&a&lOVERWORLD"
+        else if world of player is "world_nether":
+            set {_world} to "&c&lNETHER"
+        else if world of player is "world_the_end":
+            set {_world} to "&5&lEND"
+        else if world of player is "lobby":
+            set {_world} to "&f&lLOBBY"
+        else:
+            set {_world} to "&7&l%world of player%"
+
+        # Set Title
+        set title of player's fastboard to {_world}
+
+        # 2. Placeholders & Variables
+        set {_total_online} to placeholder "bungee_total" from player
+        set {_rank} to placeholder "luckperms_prefix" from player
+        
+        # 길드 정보 가져오기 (이전에 만든 변수 구조 활용)
+        set {_guild} to {guild::player::%player's uuid%}
+        if {_guild} is not set:
+            set {_guild_display} to "<gray>❌"
+        else:
+            # 길드 색상을 입혀서 표시
+            set {_c} to {guild::color::%{_guild}%}
+            set {_guild_display} to "%{_c}%%{_guild}%"
+
+        # Rank 예외 처리
+        if {_rank} is not set:
+            set {_rank} to "<gray>❌"
+        else if {_rank} is "" or "none":
+            set {_rank} to "<gray>❌"
+
+        # 3. Scoreboard Lines
+        # 라인 번호를 조정하여 Guild를 핑 아래에 배치했습니다.
+        set line 6 of player's fastboard to mini message from "<white>ʀᴀɴᴋ: <reset>%{_rank}%"
+        set line 5 of player's fastboard to mini message from "<gray><strikethrough>                    "
+        set line 4 of player's fastboard to mini message from "<white>ᴘɪɴɢ: <green>%ping of player%ms"
+        
+        # [추가] 길드 라인 (핑 아래)
+        set line 3 of player's fastboard to mini message from "<white>ɢᴜɪʟᴅ: <reset>%{_guild_display}%"
+        
+        set line 2 of player's fastboard to mini message from "<white>ᴏɴʟɪɴᴇ: <aqua>%{_total_online}%"
+        set line 1 of player's fastboard to mini message from "<gray><strikethrough>                    "
+
+        wait 1 second
