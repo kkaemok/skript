@@ -1,0 +1,176 @@
+# ================== 함수 ==================
+function getGuildColorCode(t: text) :: text:
+    if {_t} is "빨강":
+        return "&c"
+    else if {_t} is "파랑":
+        return "&b"
+    else if {_t} is "초록":
+        return "&a"
+    else if {_t} is "노랑":
+        return "&e"
+    else if {_t} is "금색":
+        return "&6"
+    else if {_t} is "보라":
+        return "&d"
+    else if {_t} is "검정":
+        return "&0"
+    else if {_t} is "회색":
+        return "&7"
+    else if {_t} is "하양":
+        return "&f"
+    else:
+        return "&f"
+
+# ================== SkBee 탭 완성 (따옴표 자동 추가) ==================
+on tab complete for "/길드":
+    set tab completions for position 1 to "만들기", "참여", "리스트", "탈퇴", "삭제" and "신고"
+    
+    # 두 번째 인자: 길드 이름 목록 (따옴표 포함)
+    if tab arg 1 is "참여" or "삭제" or "신고":
+        loop {guild::list::*}:
+            # 각 길드 이름 앞뒤에 ""를 붙여서 추천 목록에 추가
+            add """%loop-value%""" to {_quotedGuilds::*}
+        set tab completions for position 2 to {_quotedGuilds::*}
+        
+    # 세 번째 인자: 색상 목록
+    if tab arg 1 is "만들기":
+        set tab completions for position 3 to "빨강", "파랑", "초록", "노랑", "금색", "보라", "검정", "회색" and "하양"
+
+# ================== 명령어 ==================
+command /길드 [<text>]:
+    trigger:
+        if arg 1 is not set:
+            send "§e[ 길드 시스템 도움말 ]" to player
+            send "§f/길드 만들기 ""이름"" [색상]" to player
+            send "§f/길드 참여 ""이름""" to player
+            send "§f/길드 리스트" to player
+            send "§f/길드 탈퇴" to player
+            send "§f/길드 삭제 ""이름""" to player
+            send "§f/길드 신고 ""이름"" [사유]" to player
+            stop
+
+        set {_raw} to arg 1
+
+        # ---------- 공통 따옴표 파싱 로직 ----------
+        if {_raw} contains """":
+            set {_split::*} to split {_raw} by """"
+            set {_sub} to {_split::1}
+            replace all " " with "" in {_sub}
+            set {_guildName} to {_split::2}
+            set {_extra} to {_split::3}
+            if {_extra} starts with " ":
+                set {_extra} to subtext of {_extra} from 2 to length of {_extra}
+        else:
+            set {_args::*} to split {_raw} by " "
+            set {_sub} to {_args::1}
+            set {_guildName} to {_args::2}
+            set {_extra} to {_args::3}
+
+        # ---------- 만들기 ----------
+        if {_sub} is "만들기":
+            if {_guildName} is not set:
+                send "§c길드 이름을 따옴표 안에 입력하세요." to player
+                stop
+            if {guild::owner::%{_guildName}%} is set:
+                send "§c이미 존재하는 길드입니다." to player
+                stop
+            if {guild::player::%player's uuid%} is set:
+                send "§c이미 가입된 길드가 있습니다." to player
+                stop
+
+            set {_colorName} to {_extra} ? "하양"
+            set {_colorCode} to getGuildColorCode({_colorName})
+            
+            set {_lpGroup} to "guild_%{_guildName}%"
+            replace all " " with "_" in {_lpGroup}
+            
+            # 플레이어 이름과 한 칸 띄우기 위해 앞에 공백 추가
+            set {_suffix} to " %{_colorCode}%[%{_guildName}%]&r"
+
+            set {guild::owner::%{_guildName}%} to player's uuid
+            set {guild::ownerName::%{_guildName}%} to name of player
+            set {guild::player::%player's uuid%} to {_guildName}
+            set {guild::color::%{_guildName}%} to {_colorCode}
+            set {guild::lpgroup::%{_guildName}%} to {_lpGroup}
+            if {guild::list::*} does not contain {_guildName}:
+                add {_guildName} to {guild::list::*}
+
+            execute console command "lp creategroup %{_lpGroup}%"
+            execute console command "lp group %{_lpGroup}% meta addsuffix 100 ""%{_suffix}%"""
+            execute console command "lp user %player% parent add %{_lpGroup}%"
+            send "§a길드 '%{_guildName}%' 생성 완료! (색상: %{_colorName}%)" to player
+
+        # ---------- 신고 ----------
+        else if {_sub} is "신고":
+            if {_guildName} is not set:
+                send "§c신고할 길드 이름을 따옴표 안에 입력하세요." to player
+                stop
+            
+            if {guild::owner::%{_guildName}%} is not set:
+                send "§c'%{_guildName}%'은(는) 존재하지 않는 길드입니다." to player
+                stop
+                
+            send "§4[신고 접수] §f대상: %{_guildName}% | 사유: %{_extra}%" to player
+            loop all players:
+                if loop-player is op:
+                    send "§4[길드 신고] §c%player% → %{_guildName}% : §7%{_extra}%" to loop-player
+
+        # ---------- 리스트 ----------
+        else if {_sub} is "리스트":
+            send "§e[ 길드 목록 ]" to player
+            if size of {guild::list::*} is 0:
+                send "§7생성된 길드가 없습니다." to player
+                stop
+            loop {guild::list::*}:
+                set {_c} to {guild::color::%loop-value%}
+                set {_owner} to {guild::ownerName::%loop-value%}
+                send "§f- %colored {_c}%%loop-value% §7(길드장: %{_owner}%)" to player
+
+        # ---------- 참여 ----------
+        else if {_sub} is "참여":
+            if {guild::player::%player's uuid%} is set:
+                send "§c이미 길드에 속해 있습니다." to player
+                stop
+            if {guild::owner::%{_guildName}%} is not set:
+                send "§c존재하지 않는 길드입니다." to player
+                stop
+
+            set {guild::player::%player's uuid%} to {_guildName}
+            set {_lp} to {guild::lpgroup::%{_guildName}%}
+            execute console command "lp user %player% parent add %{_lp}%"
+            send "§a%colored {guild::color::%{_guildName}%}%%{_guildName}% §a길드에 가입했습니다." to player
+
+        # ---------- 탈퇴 / 삭제 ----------
+        else if {_sub} is "탈퇴" or "삭제":
+            if {_sub} is "탈퇴":
+                set {_targetGuild} to {guild::player::%player's uuid%}
+            else:
+                set {_targetGuild} to {_guildName}
+
+            if {guild::owner::%{_targetGuild}%} is not set:
+                send "§c해당 길드가 존재하지 않습니다." to player
+                stop
+
+            if {_sub} is "삭제":
+                if {guild::owner::%{_targetGuild}%} is not player's uuid:
+                    send "§c길드장만 삭제할 수 있습니다." to player
+                    stop
+
+            set {_lp} to {guild::lpgroup::%{_targetGuild}%}
+
+            if {guild::owner::%{_targetGuild}%} is player's uuid:
+                loop all players:
+                    if {guild::player::%loop-player's uuid%} is {_targetGuild}:
+                        execute console command "lp user %loop-player% parent remove %{_lp}%"
+                        delete {guild::player::%loop-player's uuid%}
+                execute console command "lp deletegroup %{_lp}%"
+                delete {guild::owner::%{_targetGuild}%}
+                delete {guild::ownerName::%{_targetGuild}%}
+                delete {guild::color::%{_targetGuild}%}
+                delete {guild::lpgroup::%{_targetGuild}%}
+                remove {_targetGuild} from {guild::list::*}
+                send "§e길드 '%{_targetGuild}%'가 해체되었습니다." to player
+            else:
+                execute console command "lp user %player% parent remove %{_lp}%"
+                delete {guild::player::%player's uuid%}
+                send "§e길드에서 탈퇴했습니다." to player
